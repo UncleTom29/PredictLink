@@ -1,0 +1,21 @@
+# programs/Cargo.toml
+[package]
+name = "predictlink-oracle"
+version = "0.1.0"
+description = "PredictLink Oracle Program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "predictlink_oracle"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"

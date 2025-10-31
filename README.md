@@ -46,7 +46,7 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
   {
     "eventId": "base58_event_pda",
     "eventDescription": "Will SOL > $200 by EOY 2025?",
-    "outcome": true  // Optional; AI overrides if high confidence
+    "outcome": true  
   }
   ```
 - **Response** (200 OK):
@@ -76,7 +76,7 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
   {
     "proposalPda": "base58_proposal_pda",
     "counterEvidence": "Detailed contradiction with sources: e.g., SOL at $150 per CoinMarketCap",
-    "sources": ["CoinMarketCap"]  // Optional array
+    "sources": ["CoinMarketCap"]  
   }
   ```
 - **Response** (200 OK):
@@ -85,7 +85,7 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
     "status": "disputed",
     "counterTxId": "arweave_tx_id",
     "disputeTxSignature": "base58_solana_tx",
-    "livenessRemaining": 3600  // Seconds
+    "livenessRemaining": 3600  
   }
   ```
 - **Errors**:
@@ -109,7 +109,7 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
   {
     "status": "resolved",
     "txSignature": "base58_solana_tx",
-    "payouts": { "winners": "amount", "losers": "slashed" }  // Phase 3+
+    "payouts": { "winners": "amount", "losers": "slashed" }  
   }
   ```
 - **Errors**:
@@ -125,8 +125,8 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
 - **Response**:
   ```json
   {
-    "proposal": { /* Full Proposal struct */ },
-    "evidence": "Arweave JSON bundle"  // If included
+    "proposal": { },
+    "evidence": "Arweave JSON bundle"  
   }
   ```
 - **Rate Limit**: 100/min.
@@ -140,7 +140,7 @@ This document outlines the RESTful API endpoints for the PredictLink Oracle back
 - **Response**:
   ```json
   {
-    "events": [ /* Array of Event structs */ ],
+    "events": [ ],
     "total": 150
   }
   ```
@@ -216,27 +216,71 @@ PredictLink is a hybrid oracle system combining optimistic mechanisms, AI assist
 
 ## Data Flow Diagram
 
-```mermaid
-graph TD
-    A[Event Trigger<br/>(Prediction Market)] --> B[Event-Resolution Engine<br/>(Solana PDA)]
-    B --> C{AI-Assisted Proposing?}
-    C -->|High Confidence| D[Auto-Submit Proposal<br/>(+ Arweave Evidence)]
-    C -->|Low| E[Human Review Queue]
-    D --> F[Hybrid Controller<br/>(Route: Subjective/Objective)]
-    F -->|Subjective| G[Liveness Window<br/>(2h)]
-    F -->|Objective| H[Pyth/RedStone Feed<br/>(CPI)]
-    G --> I[Autonomous Dispute Bots<br/>(Monitor + Verify)]
-    I -->|Dispute| J[DAO Arbitration<br/>(3-5 days)]
-    I -->|No Dispute| K[Auto-Resolve<br/>(Payouts)]
-    J --> K
-    K --> L[RWA Feeds<br/>(Wormhole Attestations)]
-    L --> M[DeFi Composability<br/>(Markets, Insurance)]
-    D --> N[Immutable Storage<br/>(Arweave/IPFS)]
-    N -.->|Proof| B
-    H -.->|Fallback| G
+```
 
-    style A fill:#e1f5fe
-    style M fill:#f3e5f5
+┌──────────────────────────────────────────────┐
+│         Event Trigger (Prediction Market)    │
+└──────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────┐
+│     Event-Resolution Engine (Solana PDA)     │
+└──────────────────────────────────────────────┘
+                     │
+                     ▼
+            ┌────────────────────────────┐
+            │  AI-Assisted Proposing?    │
+            └────────────────────────────┘
+              │                     │
+    ┌─────────┘                     └───────────┐
+    ▼                                           ▼
+┌────────────────────────────┐        ┌────────────────────────┐
+│ Auto-Submit Proposal       │        │ Human Review Queue     │
+│ (+ Arweave Evidence)       │        └────────────────────────┘
+└────────────────────────────┘
+              │
+              ▼
+┌──────────────────────────────────────────────┐
+│   Hybrid Controller (Route: Subj / Obj)      │
+└──────────────────────────────────────────────┘
+        │                          │
+   Subjective                 Objective
+        │                          │
+        ▼                          ▼
+┌────────────────────────┐   ┌─────────────────────────────┐
+│ Liveness Window (2h)   │   │ Pyth / RedStone Feed (CPI)  │
+└────────────────────────┘   └─────────────────────────────┘
+        │                          │
+        ▼                          │
+┌───────────────────────────────┐  │
+│ Autonomous Dispute Bots       │  │
+│ (Monitor + Verify)            │  │
+└───────────────────────────────┘  │
+     │             │               │
+     │ Dispute     │ No Dispute    │
+     ▼             ▼               │
+┌──────────────────────┐   ┌────────────────────────┐
+│ DAO Arbitration      │   │ Auto-Resolve (Payouts) │
+│ (3-5 days)           │   └────────────────────────┘
+└──────────────────────┘              │
+          └───────────────────────────┘
+                     ▼
+┌────────────────────────────────────────┐
+│ RWA Feeds (Wormhole Attestations)      │
+└────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────┐
+│ DeFi Composability (Markets, Insurance)│
+└────────────────────────────────────────┘
+
+────────────────────────────────────────────
+Additional Flows:
+────────────────────────────────────────────
+• Auto-Submit Proposal ──▶ Immutable Storage (Arweave/IPFS)
+• Immutable Storage ──▶ Proof ──▶ Event-Resolution Engine (loop)
+• Pyth/RedStone Feed ──▶ Fallback ──▶ Liveness Window
+
 ```
 
 ## Tech Stack

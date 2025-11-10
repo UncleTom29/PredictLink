@@ -1,15 +1,17 @@
-// programs/src/lib.rs
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::Clock;
-use crate::state::{Oracle, Proposal, Event, ResolutionType};
+mod state;
+mod error;
+use crate::state::{Oracle, Proposal, Event};
+use crate::error::OracleError;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("2JaiFHTyNdkRmGrGEAagDUDYBVyA1LkL3v12eG2pF5Yn");
 
 #[program]
 pub mod predictlink_oracle {
     use super::*;
 
-    /// Initializes the oracle configuration
+   
     pub fn initialize(
         ctx: Context<Initialize>,
         bond_amount: u64,
@@ -29,11 +31,11 @@ pub mod predictlink_oracle {
     pub fn create_event(
         ctx: Context<CreateEvent>,
         description: String,
-        resolution_type: u8,  // 0 for binary
+        resolution_type: u8,  
     ) -> Result<()> {
         let event = &mut ctx.accounts.event;
         let clock = Clock::get()?;
-        event.id = ctx.accounts.oracle.total_resolved + 1;  // Simple ID gen
+        event.id = ctx.accounts.oracle.total_resolved + 1; 
         event.description = description;
         event.resolution_type = resolution_type;
         event.market_address = ctx.accounts.market.key();
@@ -57,7 +59,7 @@ pub mod predictlink_oracle {
         // Validate bond transfer (system program handles transfer, but check amount)
         require!(ctx.accounts.proposer.to_account_info().lamports() >= oracle.bond_amount, OracleError::InsufficientBond);
 
-        // Validate resolution type (MVP: binary only)
+        // Validate resolution type
         require!(event.resolution_type == 0, OracleError::ResolutionMismatch);
 
         // Generate unique ID
@@ -156,18 +158,17 @@ pub mod predictlink_oracle {
             disputed: proposal.disputed,
         });
 
-
         Ok(())
     }
 
     /// Withdraw bond after resolution (proposer or disputer)
     pub fn withdraw_bond(ctx: Context<WithdrawBond>) -> Result<()> {
         let proposal = &ctx.accounts.proposal;
-        let oracle = &ctx.accounts.oracle;
+        let _oracle = &ctx.accounts.oracle;
 
         require!(proposal.resolved, OracleError::LivenessActive);
 
-        let withdrawer = if ctx.accounts.withdrawer.key() == proposal.proposer {
+        let _withdrawer = if ctx.accounts.withdrawer.key() == proposal.proposer {
             require!(proposal.bonded_amount > 0, OracleError::InsufficientBond);
             proposal.bonded_amount
         } else if let Some(disputer) = proposal.disputer {
@@ -181,7 +182,6 @@ pub mod predictlink_oracle {
             return err!(OracleError::Unauthorized);
         };
 
-  
 
         Ok(())
     }
@@ -193,7 +193,7 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 8 + 8 + 8 + 8 + 1,  // Discriminator + fields
+        space = 8 + 32 + 8 + 8 + 8 + 8 + 1,  
         seeds = [b"oracle"],
         bump
     )]
@@ -211,12 +211,11 @@ pub struct CreateEvent<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + 8 + 4 + 256 + 1 + 32 + 8 + 32 + 1,  // Approx for string
+        space = 8 + 8 + 4 + 256 + 1 + 32 + 8 + 32 + 1,
         seeds = [b"event", oracle.key().as_ref(), description.as_bytes()],
         bump
     )]
     pub event: Account<'info, Event>,
-    /// CHECK: Market address provided by caller
     pub market: AccountInfo<'info>,
     #[account(mut)]
     pub creator: Signer<'info>,
@@ -231,7 +230,7 @@ pub struct Propose<'info> {
     #[account(
         init,
         payer = proposer,
-        space = 8 + 8 + 32 + 32 + 1 + 32 + 8 + 8 + 8 + 1 + 1 + 8 + 32 + 32 + 1 + 32 + 1,  // Disc + fields
+        space = 8 + 8 + 32 + 32 + 1 + 32 + 8 + 8 + 8 + 1 + 1 + 8 + 32 + 32 + 1 + 32 + 1,  
         seeds = [b"proposal", event.key().as_ref()],
         bump
     )]
@@ -247,7 +246,10 @@ pub struct Propose<'info> {
 pub struct Dispute<'info> {
     #[account(mut)]
     pub oracle: Account<'info, Oracle>,
-    #[account(mut, has_one = event_id @ OracleError::ProposalNotFound)]
+    #[account(
+        mut,
+        constraint = proposal.event_id == event.key() @ OracleError::ProposalNotFound
+    )]
     pub proposal: Account<'info, Proposal>,
     pub event: Account<'info, Event>,
     #[account(mut)]
@@ -260,7 +262,10 @@ pub struct Dispute<'info> {
 pub struct Resolve<'info> {
     #[account(mut)]
     pub oracle: Account<'info, Oracle>,
-    #[account(mut, has_one = event_id @ OracleError::ProposalNotFound)]
+    #[account(
+        mut,
+        constraint = proposal.event_id == event.key() @ OracleError::ProposalNotFound
+    )]
     pub proposal: Account<'info, Proposal>,
     pub event: Account<'info, Event>,
     pub authority: Signer<'info>,
@@ -291,9 +296,4 @@ pub struct ProposalResolved {
     pub outcome: bool,
     pub proposer: Pubkey,
     pub disputed: bool,
-}
-
-#[error_code]
-pub enum OracleError {
-   
 }

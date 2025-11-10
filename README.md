@@ -1,6 +1,8 @@
 # PredictLink
 PredictLink is a domain-specific hybrid oracle designed for prediction markets, real-world asset (RWA) data feeds, and event-driven DeFi protocols on Solana. 
 
+Devnet Deployment: https://explorer.solana.com/address/2JaiFHTyNdkRmGrGEAagDUDYBVyA1LkL3v12eG2pF5Yn?cluster=devnet
+
 # PredictLink Oracle API Documentation
 
 This document outlines the RESTful API endpoints for the PredictLink Oracle backend. The API is built with Express.js and integrates with Solana (via Anchor), OpenAI (for AI proposing), and Arweave (for evidence storage). All endpoints are secured with rate limiting, CORS, and input validation (via Joi).
@@ -750,10 +752,7 @@ cp .env.example .env
 
 ### Run Localnet
 ```bash
-# Start Solana validator
-solana-test-validator --reset
-
-# In another terminal: Deploy program
+cd predictlink-programs
 anchor build
 anchor deploy --provider.cluster localnet
 
